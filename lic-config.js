@@ -26,10 +26,9 @@ async function checkLicense(SHEET_ID, host, pageCache, ctx, force = false) {
         // Encode query untuk mencari: Kolom A (Host) dan Kolom B (Sheet ID)
         const query = encodeURIComponent(`SELECT C WHERE A = '${host}' AND B = '${SHEET_ID}' LIMIT 1`);
         
-        // Tambahkan cb=${Date.now()} agar fetch ke Google Sheets tidak terkena cache internal Google
-        const sheetUrl = `https://docs.google.com/spreadsheets/d/${LIC_SETTINGS.MASTER_ID}/gviz/tq?tqx=out:json&sheet=Licenses&tq=${query}&cb=${Date.now()}`;
-        
-        const res = await fetch(sheetUrl, { cache: 'no-store' });
+        // Di file GitHub (lic-config.js), ganti baris fetch Google Sheets dengan ini:
+const sheetUrl = `https://docs.google.com/spreadsheets/d/${LIC_SETTINGS.MASTER_ID}/gviz/tq?tqx=out:json&sheet=Licenses&tq=${query}&t=${Math.random()}`;
+const res = await fetch(sheetUrl, { cache: 'no-store' });
         const text = await res.text();
         
         // Extract JSON dari format response Google visualization
