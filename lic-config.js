@@ -2,5 +2,5 @@
 // by Andi | disatu.web.id
 
 export const LIC_SETTINGS = {
-  MASTER_ID: "a"
+  MASTER_ID: "1tasyRF3BlNgZriFf6DcFh-dpA9mFLON2V7T3vQj5Tg0"
 };
