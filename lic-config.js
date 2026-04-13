@@ -1,18 +1,15 @@
-// https://github.com/username/repo/raw/main/lic-config.js
-
+// lic-config.js
 export const LIC_SETTINGS = {
   MASTER_ID: "1tasyRF3BlNgZriFf6DcFh-dpA9mFLON2V7T3vQj5Tg0",
-  CACHE_TTL: 604800 // 7 hari
+  CACHE_TTL: 604800 // 7 Hari
 };
 
 export async function checkLicense(SHEET_ID, host, pageCache, ctx) {
     const licCacheKey = new Request(`https://lic-verify.local/v1?id=${SHEET_ID}&host=${host}`, { method: 'GET' });
     
-    // 1. Cek Cache
     let cached = await pageCache.match(licCacheKey);
     if (cached) return (await cached.text()) === 'OK';
 
-    // 2. Verifikasi ke Google Sheets (Master ID dari variabel di atas)
     try {
         const query = encodeURIComponent(`SELECT C WHERE A = '${host}' AND B = '${SHEET_ID}' LIMIT 1`);
         const res = await fetch(`https://docs.google.com/spreadsheets/d/${LIC_SETTINGS.MASTER_ID}/gviz/tq?tqx=out:json&sheet=Licenses&tq=${query}&cb=${Date.now()}`);
@@ -25,13 +22,12 @@ export async function checkLicense(SHEET_ID, host, pageCache, ctx) {
             if (json.table?.rows?.length > 0 && json.table.rows[0].c[0]?.v === 'Aktif') valid = true;
         }
 
-        // 3. Simpan Cache
         ctx.waitUntil(pageCache.put(licCacheKey, new Response(valid ? 'OK' : 'FAIL', { 
-            headers: { 'Cache-Control': `public, max-age=${LIC_SETTINGS.CACHE_TTL}` } 
+            headers: { 'Content-Type': 'text/plain', 'Cache-Control': `public, max-age=${LIC_SETTINGS.CACHE_TTL}` } 
         })));
         
         return valid;
     } catch (e) {
-        return true; // Fallback jika sheet master bermasalah
+        return true; 
     }
 }
