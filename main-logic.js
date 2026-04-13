@@ -1,7 +1,8 @@
 // _worker.js - VERSI CMS GOD MODE ULTIMATE (SERVER-SIDE PAGINATION + SITEMAP INDEX)
 // Arsitektur: Enterprise SQL Limits + Real-Time Fetch + Auto Schema + CSS Isolated
 // by Andi | disatu.web.id
-
+// ✅ MODIFIKASI CDN: Inisialisasi global handler
+self.CMS_GOD_MODE_HANDLER = (function() {
 async function fetchSheetData(sheetId, sheetName, query = '') {
     const antiCache = new Date().getTime(); 
     let url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${sheetName}&headers=1&t=${antiCache}`;
@@ -809,3 +810,7 @@ export default {
         return env.ASSETS.fetch(request);
       }
     };
+  // ✅ Kembalikan object handler agar bisa dipanggil wrapper
+    return { fetch }; 
+    
+})(); // <--- ✅ TAMBAHKAN INI: Penutup fungsi utama
