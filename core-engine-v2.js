@@ -1,4 +1,4 @@
-// _worker.js - VERSI CMS GOD MODE ULTIMATE (SERVER-SIDE PAGINATION + SITEMAP INDEX)
+// _worker.js - VERSI CMS GOD MODE ULTIMATE (UNIVERSAL REVERSE PROXY & STANDALONE)
 // Arsitektur: Enterprise SQL Limits + Real-Time Fetch + Auto Schema + CSS Isolated
 // by Andi | disatu.web.id
 
@@ -139,15 +139,22 @@ function getSmartIcon(key, classes = "w-4 h-4") {
 
 export default {
     async fetch(request, env, ctx) {
-        const url = new URL(request.url);
+        // ✨ MODIFIKASI: Deteksi Request Asli (Direct) vs Request Proxy (via Klien)
+        const originalUrlStr = request.headers.get('X-Original-Url') || request.url;
+        const url = new URL(originalUrlStr);
         const path = url.pathname.replace(/\/$/, '') || '/';
-        const reqSiteUrl = url.origin;
+        const isProxy = !!request.headers.get('X-Original-Url');
+        
+        // Gunakan domain klien asli jika ada, jika tidak fallback ke origin request
+        const clientDomain = request.headers.get('X-Client-Domain') || url.hostname;
+        const reqSiteUrl = isProxy ? `https://${clientDomain}` : url.origin;
 
-        if (path.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg)$/) && path !== '/config.js') { 
+        // Cegah Engine Pusat mem-fetch file lokal jika ini mode proxy (Klien handle sendiri)
+        if (!isProxy && path.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg)$/) && path !== '/config.js') { 
             return env.ASSETS.fetch(request); 
         }
 
-        if (path === '/config.js') {
+        if (!isProxy && path === '/config.js') {
             const dest = request.headers.get('Sec-Fetch-Dest');
             const fetchMode = request.headers.get('Sec-Fetch-Mode');
             const accept = request.headers.get('Accept') || '';
@@ -161,18 +168,23 @@ export default {
             return securedRes;
         }
 
-        let SHEET_ID = ''; let GAS_URL = '';
-        try {
-            const configReq = new Request(reqSiteUrl + '/config.js');
-            const configRes = await env.ASSETS.fetch(configReq);
-            if (configRes.ok) {
-                const configText = await configRes.text();
-                const sheetMatch = configText.match(/SHEET_ID:\s*["']([^"']+)["']/);
-                const gasMatch = configText.match(/GAS_URL:\s*["']([^"']+)["']/);
-                if (sheetMatch) SHEET_ID = sheetMatch[1];
-                if (gasMatch) GAS_URL = gasMatch[1];
-            }
-        } catch (e) {}
+        // ✨ MODIFIKASI: Prioritaskan membaca ID dari Header Proxy, baru fallback ke config lokal
+        let SHEET_ID = request.headers.get('X-Sheet-Id') || ''; 
+        let GAS_URL = request.headers.get('X-Gas-Url') || '';
+        
+        if (!SHEET_ID && !isProxy) {
+            try {
+                const configReq = new Request(reqSiteUrl + '/config.js');
+                const configRes = await env.ASSETS.fetch(configReq);
+                if (configRes.ok) {
+                    const configText = await configRes.text();
+                    const sheetMatch = configText.match(/SHEET_ID:\s*["']([^"']+)["']/);
+                    const gasMatch = configText.match(/GAS_URL:\s*["']([^"']+)["']/);
+                    if (sheetMatch) SHEET_ID = sheetMatch[1];
+                    if (gasMatch) GAS_URL = gasMatch[1];
+                }
+            } catch (e) {}
+        }
 
         const pageCache = caches.default;
         const pageCacheKey = new Request(url.toString(), { method: 'GET' });
@@ -211,52 +223,53 @@ export default {
 
         // LISENSI DENGAN FORCE REFRESH AKTIF
         let isLicenseValid = false;
-// Ganti URL di bawah dengan URL Worker API Lisensi yang Anda buat di Langkah 1
-const LICENSE_API_URL = "https://licensi.onlinein-invitationworkersdev.workers.dev"; 
+        // Ganti URL di bawah dengan URL Worker API Lisensi yang Anda buat di Langkah 1
+        const LICENSE_API_URL = "https://licensi.onlinein-invitationworkersdev.workers.dev"; 
 
-const forceLicenseRefresh = url.searchParams.has('li') || url.searchParams.get('li') === '1';
+        const forceLicenseRefresh = url.searchParams.has('li') || url.searchParams.get('li') === '1';
 
-if (SHEET_ID && SHEET_ID !== 'ID_SPREADSHEET_PEMBELI_DISINI' && SHEET_ID !== '') {
-    const licCacheKey = new Request(`https://lic-verify.local/license-v1?id=${SHEET_ID}&host=${url.hostname}`, { method: 'GET' });
-    let cachedLic = null;
+        if (SHEET_ID && SHEET_ID !== 'ID_SPREADSHEET_PEMBELI_DISINI' && SHEET_ID !== '') {
+            // ✨ MODIFIKASI LISENSI: Gunakan clientDomain agar aman di mode Proxy
+            const licCacheKey = new Request(`https://lic-verify.local/license-v1?id=${SHEET_ID}&host=${clientDomain}`, { method: 'GET' });
+            let cachedLic = null;
 
-    if (!forceLicenseRefresh) {
-        cachedLic = await pageCache.match(licCacheKey);
-    }
+            if (!forceLicenseRefresh) {
+                cachedLic = await pageCache.match(licCacheKey);
+            }
 
-    if (cachedLic) {
-        if (await cachedLic.text() === 'OK') isLicenseValid = true;
-    } else {
-        try {
-            // Memanggil API Worker Lisensi, bukan langsung ke Google Sheets
-            const res = await fetch(`${LICENSE_API_URL}?id=${SHEET_ID}&host=${url.hostname}`);
-            const result = await res.text();
-            
-            if (result === 'OK') isLicenseValid = true;
+            if (cachedLic) {
+                if (await cachedLic.text() === 'OK') isLicenseValid = true;
+            } else {
+                try {
+                    // Memanggil API Worker Lisensi, bukan langsung ke Google Sheets
+                    const res = await fetch(`${LICENSE_API_URL}?id=${SHEET_ID}&host=${clientDomain}`);
+                    const result = await res.text();
+                    
+                    if (result === 'OK') isLicenseValid = true;
 
-            // Simpan ke Cache
-            ctx.waitUntil(pageCache.put(licCacheKey, new Response(isLicenseValid ? 'OK' : 'FAIL', { 
-                headers: { 
-                    'Content-Type': 'text/plain', 
-                    'Cache-Control': 'public, max-age=604800' 
+                    // Simpan ke Cache
+                    ctx.waitUntil(pageCache.put(licCacheKey, new Response(isLicenseValid ? 'OK' : 'FAIL', { 
+                        headers: { 
+                            'Content-Type': 'text/plain', 
+                            'Cache-Control': 'public, max-age=604800' 
+                        } 
+                    })));
+                } catch(e) { 
+                    isLicenseValid = true; // Safety fallback
                 } 
-            })));
-        } catch(e) { 
-            isLicenseValid = true; // Safety fallback
-        } 
-    }
-}
+            }
+        }
 
-// Handler jika Lisensi tidak valid
-if (!isLicenseValid) {
-    if (!SHEET_ID || SHEET_ID === 'ID_SPREADSHEET_PEMBELI_DISINI') {
-        return new Response("⚙️ SISTEM BELUM SIAP: Silakan masukkan Sheet ID Anda di config.js", { status: 200 });
-    }
-    return new Response(`<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Lisensi Belum Aktif</title><style>body{font-family:sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;background:#fff1f2;color:#9f1239;text-align:center;}h1{font-weight:900;}p{opacity:0.8;margin-bottom:20px;line-height:1.6;}.footer{margin-top:30px;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;}.btn{background:#e11d48;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;}</style></head><body><h1>LISENSI BELUM AKTIF</h1><p>Domain: <strong>${url.hostname}</strong><br>ID: <strong>${SHEET_ID}</strong></p><a href="?li=1" class="btn">REFRESH LISENSI</a><div class="footer">&copy; 2026 by Andi | disatu.web.id</div></body></html>`, { 
-        status: 403, 
-        headers: { 'Content-Type': 'text/html;charset=UTF-8' } 
-    });
-}
+        // Handler jika Lisensi tidak valid
+        if (!isLicenseValid) {
+            if (!SHEET_ID || SHEET_ID === 'ID_SPREADSHEET_PEMBELI_DISINI') {
+                return new Response("⚙️ SISTEM BELUM SIAP: Silakan masukkan Sheet ID Anda di config.js", { status: 200 });
+            }
+            return new Response(`<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Lisensi Belum Aktif</title><style>body{font-family:sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;background:#fff1f2;color:#9f1239;text-align:center;}h1{font-weight:900;}p{opacity:0.8;margin-bottom:20px;line-height:1.6;}.footer{margin-top:30px;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;}.btn{background:#e11d48;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;}</style></head><body><h1>LISENSI BELUM AKTIF</h1><p>Domain: <strong>${clientDomain}</strong><br>ID: <strong>${SHEET_ID}</strong></p><a href="?li=1" class="btn">REFRESH LISENSI</a><div class="footer">&copy; 2026 by Andi | disatu.web.id</div></body></html>`, { 
+                status: 403, 
+                headers: { 'Content-Type': 'text/html;charset=UTF-8' } 
+            });
+        }
 
         if (SHEET_ID && (path === "/robots.txt" || path === "/ads.txt")) {
             const settingsRaw = await fetchSheetData(SHEET_ID, 'Settings');
@@ -572,7 +585,7 @@ if (!isLicenseValid) {
                     if (key === 'status') {
                         let badgeClass = 'bg-blue-100 text-blue-700 border-blue-200';
                         if (val.toLowerCase().match(/terjual|sold|full|penuh/)) badgeClass = 'bg-red-100 text-red-700 border-red-200';
-                        else if (val.toLowerCase().match(/sewa|sisa/)) badgeClass = 'bg-orange-100 text-orange-700 border-orange-200';
+                        else if (val.toLowerCase().match(/sewa|sisa/)) badge(Class = 'bg-orange-100 text-orange-700 border-orange-200');
                         return `<div class="inline-block border-2 font-black uppercase tracking-widest text-sm px-5 py-2 rounded-xl mb-6 ${badgeClass} shadow-sm">${val}</div>`;
                     }
                     if (key.match(/^(harga|tarif|biaya|spp)$/)) return `<div class="text-3xl md:text-4xl font-black text-emerald-600 my-6 py-4 px-6 bg-emerald-50/50 border-2 border-emerald-100 rounded-2xl inline-block w-full text-center shadow-sm tracking-tight">${val}</div>`;
