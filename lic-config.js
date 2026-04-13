@@ -1,5 +1,5 @@
 // =========================================================================
-// lic-config.js - SISTEM LISENSI CENTRALIZED
+// lic-config.js - SISTEM LISENSI CENTRALIZED (FULL VERSION)
 // by Andi | disatu.web.id
 // =========================================================================
 
@@ -9,7 +9,7 @@ const LIC_SETTINGS = {
 };
 
 async function checkLicense(SHEET_ID, host, pageCache, ctx, force = false) {
-    // Definisi key cache yang unik berdasarkan host dan sheet_id pembeli
+    // Definisi key cache yang unik berdasarkan host dan sheet_id
     const licCacheKey = new Request(`https://lic-verify.local/license-v1?id=${SHEET_ID}&host=${host}`, { method: 'GET' });
     
     // 1. Jika BUKAN force refresh, cek apakah ada data di cache edge Cloudflare
@@ -26,9 +26,14 @@ async function checkLicense(SHEET_ID, host, pageCache, ctx, force = false) {
         // Encode query untuk mencari: Kolom A (Host) dan Kolom B (Sheet ID)
         const query = encodeURIComponent(`SELECT C WHERE A = '${host}' AND B = '${SHEET_ID}' LIMIT 1`);
         
-        // Di file GitHub (lic-config.js), ganti baris fetch Google Sheets dengan ini:
-const sheetUrl = `https://docs.google.com/spreadsheets/d/${LIC_SETTINGS.MASTER_ID}/gviz/tq?tqx=out:json&sheet=Licenses&tq=${query}&t=${Math.random()}`;
-const res = await fetch(sheetUrl, { cache: 'no-store' });
+        // Gunakan Math.random() agar fetch ke Google Sheets benar-benar paksa data baru (Bypass Cache Google)
+        const sheetUrl = `https://docs.google.com/spreadsheets/d/${LIC_SETTINGS.MASTER_ID}/gviz/tq?tqx=out:json&sheet=Licenses&tq=${query}&t=${Math.random()}`;
+        
+        const res = await fetch(sheetUrl, { 
+            cache: 'no-store',
+            headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
+        });
+        
         const text = await res.text();
         
         // Extract JSON dari format response Google visualization
@@ -43,7 +48,7 @@ const res = await fetch(sheetUrl, { cache: 'no-store' });
             }
         }
 
-        // 3. Simpan hasil verifikasi terbaru ke dalam cache edge Cloudflare
+        // 3. Simpan hasil verifikasi terbaru ke dalam cache edge Cloudflare (OK atau FAIL)
         const responseToCache = new Response(valid ? 'OK' : 'FAIL', { 
             headers: { 
                 'Content-Type': 'text/plain', 
@@ -55,7 +60,7 @@ const res = await fetch(sheetUrl, { cache: 'no-store' });
         
         return valid;
     } catch (e) {
-        // Fallback: Jika Google Sheets bermasalah, izinkan akses agar user tidak terganggu
+        // Fallback: Jika Google Sheets bermasalah, anggap valid agar user tidak terganggu
         console.error("Master License Fetch Error:", e);
         return true; 
     }
