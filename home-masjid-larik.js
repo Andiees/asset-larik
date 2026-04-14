@@ -1,7 +1,30 @@
 // by Andi | disatu.web.id
 
 // ==========================================
-// 5. KAJIAN: FETCH, PAGINATION, DEEP LINK & SHARE
+// 1. FUNGSI COPY DINAMIS (Bebas Hardcode)
+// ==========================================
+function copyDynamicText(textToCopy, toastMessage) {
+    const textArea = document.createElement("textarea");
+    textArea.value = textToCopy;
+    textArea.style.position = "fixed"; 
+    textArea.style.left = "-9999px"; 
+    document.body.appendChild(textArea);
+    textArea.select();
+    
+    try {
+        document.execCommand('copy');
+        if(typeof showToast === 'function') {
+            showToast(toastMessage);
+        }
+    } catch (err) {
+        alert('Gagal menyalin otomatis. Silakan salin manual.');
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+// ==========================================
+// 2. KAJIAN: FETCH, PAGINATION, DEEP LINK & SHARE
 // ==========================================
 let allKajianData = [];
 let displayedCount = 0;
@@ -54,7 +77,6 @@ async function fetchKajianData() {
         if(allKajianData.length > 0) {
             renderKajian();
             
-            // Cek jika ada perintah buka dari URL Hash
             const hash = window.location.hash;
             if(hash.startsWith('#kajian=')) {
                 const kajianId = hash.replace('#kajian=', '');
@@ -201,32 +223,12 @@ async function shareKajian() {
         }
     } 
     
-    fallbackCopyText(currentShareData.text);
-}
-
-function fallbackCopyText(text) {
-    const textArea = document.createElement("textarea");
-    textArea.value = text;
-    textArea.style.position = "fixed"; 
-    textArea.style.left = "-9999px"; 
-    document.body.appendChild(textArea);
-    textArea.select();
-    try {
-        document.execCommand('copy');
-        if(typeof showToast === 'function') showToast('Info & Link Kajian telah disalin!');
-    } catch (err) {
-        alert('Gagal menyalin otomatis. Silakan salin manual.');
-    }
-    document.body.removeChild(textArea);
-}
-
-function copyRekening() {
-    fallbackCopyText("7123 4567 89");
-    if(typeof showToast === 'function') showToast('Nomor Rekening BSI berhasil disalin!');
+    // Menggunakan fungsi dinamis
+    copyDynamicText(currentShareData.text, 'Info & Link Kajian telah disalin!');
 }
 
 // ==========================================
-// 6. INTEGRASI LAPORAN KEUANGAN
+// 3. INTEGRASI LAPORAN KEUANGAN
 // ==========================================
 async function fetchKeuanganData() {
     try {
