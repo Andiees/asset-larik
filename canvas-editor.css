@@ -1,0 +1,77 @@
+body { font-family: 'Inter', sans-serif; }
+    
+    /* -------------------------------------------
+       1. TEMA UTAMA (Emerald & Slate)
+    ------------------------------------------- */
+    .gjs-one-bg { background-color: #0f172a; } 
+    .gjs-two-color { color: #f1f5f9; } 
+    .gjs-three-bg { background-color: #10b981; color: white; } 
+    .gjs-four-color, .gjs-four-color-h:hover { color: #10b981; }
+    .gjs-cv-canvas { background-color: #e2e8f0; } 
+    
+    /* -------------------------------------------
+       2. PANEL & FORM STYLING
+    ------------------------------------------- */
+    .gjs-pn-panels { border-bottom: 1px solid #e2e8f0; }
+    .gjs-sm-sector-title, .gjs-trt-header { background-color: #1e293b; color: #f8fafc; font-weight: 600; padding: 12px; border-bottom: 1px solid #334155;}
+    .gjs-field { background-color: #0f172a; border-radius: 8px; border: 1px solid #334155; }
+    .gjs-sm-property { padding: 10px; }
+    .gjs-logo-version, .gjs-pn-commands { display: none; }
+    .gjs-pn-views { background-color: #1e293b; border-bottom: 1px solid #334155; }
+    .gjs-pn-views-container { border-left: 1px solid #e2e8f0; background: #0f172a; box-shadow: -4px 0 15px rgba(0,0,0,0.05); }
+
+    /* Tombol Navigasi Atas */
+    .action-btn { transition: all 0.2s ease; }
+    .action-btn:hover { background-color: #e2e8f0; color: #10b981; transform: translateY(-1px); }
+    .action-btn.active { background-color: #d1fae5; color: #059669; }
+
+    /* -------------------------------------------
+       3. PERBAIKAN SCROLLBAR (Elegan & Terlihat)
+    ------------------------------------------- */
+    /* Scrollbar untuk Panel Kanan (Gelap) */
+    .gjs-pn-views-container ::-webkit-scrollbar { width: 6px; height: 6px; }
+    .gjs-pn-views-container ::-webkit-scrollbar-track { background: #0f172a; }
+    .gjs-pn-views-container ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    .gjs-pn-views-container ::-webkit-scrollbar-thumb:hover { background: #10b981; }
+
+    /* Scrollbar untuk Canvas Editor (Terang) */
+    .gjs-cv-canvas ::-webkit-scrollbar { width: 8px; height: 8px; }
+    .gjs-cv-canvas ::-webkit-scrollbar-track { background: #f8fafc; }
+    .gjs-cv-canvas ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .gjs-cv-canvas ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* Scrollbar Utama Browser */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+    /* -------------------------------------------
+       4. PERBAIKAN COLOR PICKER (Spectrum)
+       Memastikan bisa digeser, popup di atas, dan rapi
+    ------------------------------------------- */
+    /* Memaksa Z-Index agar kotak warna tidak tertutup panel lain */
+    .sp-container { 
+      z-index: 99999 !important; 
+      border-radius: 12px; 
+      border: 1px solid #334155; 
+      background-color: #1e293b; 
+      font-family: 'Inter', sans-serif;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    /* Warna teks di dalam color picker */
+    .sp-dragger, .sp-slider { border-radius: 50%; border: 2px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.5); }
+    .sp-cancel { color: #f87171 !important; font-size: 12px; text-decoration: none !important; }
+    .sp-cancel:hover { color: #ef4444 !important; }
+    .sp-choose { 
+      background-color: #10b981 !important; 
+      background-image: none !important; 
+      border: none !important; 
+      text-shadow: none !important; 
+      border-radius: 6px !important; 
+      color: white !important;
+      font-weight: 500;
+      padding: 4px 12px !important;
+    }
+    .sp-choose:hover { background-color: #059669 !important; }
+    /* Membesarkan kotak preview warna di panel agar mudah di-klik */
+    .gjs-sm-color-p { width: 24px !important; height: 24px !important; border-radius: 6px !important; border: 2px solid #334155; }
