@@ -996,16 +996,37 @@ async function applyTheme(index) {
   const template = themesData[index];
   if (!template) return;
   
+  // 1. Buat overlay loading khusus yang mengunci layar
+  const progressOverlay = document.createElement('div');
+  progressOverlay.id = 'theme-progress-overlay';
+  progressOverlay.className = 'fixed inset-0 bg-slate-900/80 z-[9999] flex flex-col items-center justify-center backdrop-blur-sm transition-all duration-300';
+  progressOverlay.innerHTML = `
+    <div class="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center max-w-sm w-full mx-4 text-center">
+      <svg class="w-10 h-10 animate-spin text-teal-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+      <h3 class="text-lg font-black text-slate-800 mb-1">Memproses Tema</h3>
+      <p id="theme-progress-text" class="text-sm text-slate-500 font-medium">Menerapkan konfigurasi blog...</p>
+      <div class="w-full bg-slate-100 rounded-full h-2 mt-4 overflow-hidden">
+        <div id="theme-progress-bar" class="bg-teal-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(progressOverlay);
+
+  // Set template settings
   document.getElementById('set-article-tpl').value = template.article || '';
   document.getElementById('set-blog-tpl').value = template.blog || '';
   document.getElementById('set-page-tpl').value = template.page || '';
   document.getElementById('set-category-tpl').value = template.category || '';
   
-  showToast('Memproses tema & konfigurasi...', 'warning');
+  const progressText = document.getElementById('theme-progress-text');
+  const progressBar = document.getElementById('theme-progress-bar');
 
   // Auto-save logic ke halaman jika ID cocok dengan tema_landing
   if (template.idTemplate) {
     try {
+      progressText.innerText = 'Mengambil data landing pages...';
+      progressBar.style.width = '10%';
+      
       const urlLanding = `https://docs.google.com/spreadsheets/d/${SHEET_ID_THEMES}/gviz/tq?tqx=out:json&sheet=tema_landing`;
       const res = await fetch(urlLanding);
       if(res.ok) {
@@ -1016,30 +1037,51 @@ async function applyTheme(index) {
         const json = JSON.parse(jsonStr);
         const rows = json.table?.rows || [];
 
-        // Cari baris di tema_landing yang kolom index 9 (ID) sesuai dengan ID template
-        const match = rows.find(r => r.c && r.c[9] && String(r.c[9].v) === String(template.idTemplate));
-        if (match) {
-          const lName = (match.c[0] && match.c[0].v != null) ? String(match.c[0].v) : '';
-          const lSlug = (match.c[1] && match.c[1].v != null) ? String(match.c[1].v) : formatToSlug(lName);
-          const lContent = (match.c[4] && match.c[4].v != null) ? String(match.c[4].v) : '';
-
-          const pageId = 'LANDING-' + lSlug.toUpperCase().replace(/-/g, '').substring(0, 10);
+        // Cari SEMUA baris di tema_landing yang kolom index 9 (ID) sesuai dengan ID template
+        const matches = rows.filter(r => r.c && r.c[9] && String(r.c[9].v) === String(template.idTemplate));
+        
+        if (matches.length > 0) {
+          let successCount = 0;
+          const totalMatches = matches.length;
           
-          const pageData = { 
-            action: 'save_page', 
-            id: pageId, 
-            slug: lSlug, 
-            title: lName, 
-            content: lContent, 
-            is_edit: false, 
-            id_user: getUserId() 
-          };
+          for (let i = 0; i < totalMatches; i++) {
+            const match = matches[i];
+            const lName = (match.c[0] && match.c[0].v != null) ? String(match.c[0].v) : '';
+            
+            // Update UI Overlay Progress
+            progressText.innerText = `Mengimpor halaman ${i + 1} dari ${totalMatches}...`;
+            progressBar.style.width = `${10 + ((i / totalMatches) * 90)}%`;
 
-          const saveRes = await fetch(API_URL, { method: 'POST', body: JSON.stringify(pageData) });
-          const saveStatus = await saveRes.json();
+            const lSlugBase = (match.c[1] && match.c[1].v != null) ? String(match.c[1].v) : formatToSlug(lName);
+            const lContent = (match.c[4] && match.c[4].v != null) ? String(match.c[4].v) : '';
+
+            // Generate ID Unik dan Slug Unik
+            const pageId = generateUniqueId('LANDING');
+            const uniqueSlug = await generateUniqueSlugAsync(lSlugBase, 'pages');
+            
+            const pageData = { 
+              action: 'save_page', 
+              id: pageId, 
+              slug: uniqueSlug, 
+              title: lName, 
+              content: lContent, 
+              is_edit: false, 
+              id_user: getUserId() 
+            };
+
+            // Post to backend
+            const saveRes = await fetch(API_URL, { method: 'POST', body: JSON.stringify(pageData) });
+            const saveStatus = await saveRes.json();
+            
+            if(saveStatus.status === 'success') {
+              successCount++;
+            }
+          }
           
-          if(saveStatus.status === 'success') {
-            showToast(`Landing Page "${lName}" otomatis dibuat di Pages!`, 'success');
+          // Full ProgressBar
+          progressBar.style.width = '100%';
+          if (successCount > 0) {
+            showToast(`${successCount} Landing Page otomatis dibuat di Pages!`, 'success');
             setTimeout(() => { fetchAllAdminData(); }, 1000); 
           }
         }
@@ -1048,6 +1090,10 @@ async function applyTheme(index) {
       console.warn("Gagal sinkronisasi landing page otomatis:", e);
     }
   }
+
+  // Hapus overlay secara halus
+  progressOverlay.style.opacity = '0';
+  setTimeout(() => progressOverlay.remove(), 300);
 
   showToast('Kode tema blog berhasil dimasukkan. Jangan lupa simpan!', 'success');
   switchTab('settings');
