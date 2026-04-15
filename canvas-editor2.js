@@ -5,7 +5,8 @@ let activeEl = null;
 
     function startVisual() {
       const code = document.getElementById('code-entry').value;
-      if(!code.trim()) return alert("Paste kode!");
+      if(!code.trim()) return alert("Paste kode dulu!");
+      
       const parser = new DOMParser();
       const docParsed = parser.parseFromString(code, 'text/html');
       originalHead = docParsed.head.innerHTML;
@@ -22,12 +23,12 @@ let activeEl = null;
       doc.open(); doc.write(code); doc.close();
       
       setTimeout(() => {
-        setupIntelligentEngine(doc);
-        saveState(); // Simpan kondisi awal
+        setupArchitectEngine(doc);
+        saveState(); 
       }, 600);
     }
 
-    function setupIntelligentEngine(doc) {
+    function setupArchitectEngine(doc) {
       const style = doc.createElement('style');
       style.id = "sakti-internal-style";
       style.innerHTML = `
@@ -54,7 +55,17 @@ let activeEl = null;
 
       doc.addEventListener('click', e => {
         if(tb.contains(e.target) || e.target === doc.body) return;
-        e.preventDefault(); e.stopPropagation();
+        
+        // --- PERBAIKAN MENU BURGER HP ---
+        // Jika elemen atau parent-nya punya event (biasanya button menu), biarkan event aslinya jalan dulu
+        const interactiveTags = ['BUTTON', 'A', 'I', 'SPAN'];
+        const isMenuTrigger = e.target.closest('button') || e.target.closest('#menuBtn');
+        
+        if (!isMenuTrigger) {
+            e.preventDefault(); 
+            e.stopPropagation();
+        }
+
         if(activeEl) activeEl.classList.remove('s-active');
         activeEl = e.target; activeEl.classList.add('s-active');
         
@@ -88,10 +99,10 @@ let activeEl = null;
         tb.style.left = Math.max(10, rect.left) + 'px';
       }
 
+      // Action Handlers
       doc.getElementById('st-dup').onclick = (e) => {
         e.stopPropagation();
-        const cloneHTML = activeEl.outerHTML;
-        activeEl.insertAdjacentHTML('afterend', cloneHTML);
+        activeEl.insertAdjacentHTML('afterend', activeEl.outerHTML);
         saveState();
         setTimeout(() => activeEl.nextElementSibling.click(), 50);
       };
@@ -133,14 +144,13 @@ let activeEl = null;
       saveState();
     }
 
-    // --- DEVICE & HISTORY ENGINE ---
+    // --- VIEW & HISTORY LOGIC ---
     function changeView(mode) {
       const frame = document.getElementById('preview-frame');
-      const wrapper = document.getElementById('preview-wrapper');
       document.getElementById('btn-desktop').classList.toggle('active', mode === 'desktop');
       document.getElementById('btn-mobile').classList.toggle('active', mode === 'mobile');
-      if(mode === 'mobile') { frame.classList.add('mobile-view'); wrapper.style.padding = "20px"; }
-      else { frame.classList.remove('mobile-view'); wrapper.style.padding = "20px"; }
+      if(mode === 'mobile') frame.classList.add('mobile-view');
+      else frame.classList.remove('mobile-view');
     }
 
     function saveState() {
@@ -171,7 +181,7 @@ let activeEl = null;
     function reattachEvents() {
       const doc = document.getElementById('preview-frame').contentDocument;
       activeEl = null;
-      setupIntelligentEngine(doc);
+      setupArchitectEngine(doc);
     }
 
     function getCleanFinalCode() {
