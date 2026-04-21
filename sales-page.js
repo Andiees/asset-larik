@@ -136,7 +136,7 @@
             { q: 'Bagaimana jika butuh bantuan?', a: 'Tersedia support yang siap membantu jika Anda mengalami kendala saat penggunaan.' },
             { q: 'Apakah sistem akan terus diupdate?', a: 'Ya, sistem akan terus dikembangkan untuk meningkatkan performa dan fitur ke depannya.' },
             { q: 'Apakah cocok untuk pemula?', a: 'Sangat cocok. Sistem dirancang agar mudah digunakan bahkan oleh pengguna tanpa pengalaman teknis.' },
-            { q: 'Apakah ada garansi atau refund?', a: 'Ya, tersedia garansi 7 hari. Jika produk tidak sesuai harapan, Anda dapat mengajukan refund sesuai ketentuan yang berlaku.' },
+           { q: 'Apakah ada garansi atau refund?', a: 'Tidak ada garansi atau refund. Dengan melakukan pembelian, Anda dianggap telah memahami dan menyetujui produk yang dibeli.' },
         ];
 
         /* ============================================
